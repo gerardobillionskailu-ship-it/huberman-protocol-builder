@@ -526,34 +526,108 @@
 
   // --- PLAN 4 SEMANAS ---
   const planData = [
-    {s:1, t:"Semana 1 — Define tu meta", desc:"Una sola meta. Sin eso, lo demás no funciona.", items:[
+    {s:1, t:"Semana 1 — Define tu meta", desc:"Una sola meta. Sin eso, lo demás no funciona.", placeholder:"¿Qué meta vas a perseguir esta semana? ¿Cuántas horas? ¿Qué días y a qué hora?", items:[
       "Escribí mi meta principal (una, no cinco)",
       "Elegí la acción exacta que voy a hacer (ej: escribir, correr, estudiar — no 'trabajar en')",
       "Puse mis tres checkpoints: qué habré logrado en la semana 4, 8 y 12"
     ]},
-    {s:2, t:"Semana 2 — Cuida tu energía", desc:"Pequeños hábitos físicos que mantienen la motivación alta.", items:[
+    {s:2, t:"Semana 2 — Cuida tu energía", desc:"Pequeños hábitos físicos que mantienen la motivación alta.", placeholder:"¿Qué vas a cambiar en tu rutina física esta semana? ¿A qué hora te levantarás? ¿Cuándo harás ejercicio?", items:[
       "Salí al sol por la mañana (10 min mínimo, sin gafas)",
       "Esperé al menos 90 min antes del primer café",
       "No combiné redes + música intensa + café todo a la vez",
       "Me duché con agua fría al menos 1 minuto"
     ]},
-    {s:3, t:"Semana 3 — Entrena el modo mental", desc:"Cómo piensas en los días malos determina si sigues o no.", items:[
+    {s:3, t:"Semana 3 — Entrena el modo mental", desc:"Cómo piensas en los días malos determina si sigues o no.", placeholder:"¿Cuál es tu mayor obstáculo mental? ¿Qué pierdes concretamente si no cumples esta semana?", items:[
       "En un momento difícil, me pregunté: ¿qué pierdo si no lo hago?",
       "Me felicité por hacer la acción, no solo por el resultado",
       "Cuando sentí presión, la usé como señal de que algo importa"
     ]},
-    {s:4, t:"Semana 4 — Instala la rutina", desc:"El objetivo no es la fuerza de voluntad, es que sea automático.", items:[
+    {s:4, t:"Semana 4 — Instala la rutina", desc:"El objetivo no es la fuerza de voluntad, es que sea automático.", placeholder:"¿Cómo vas a estructurar tus bloques de trabajo? ¿Qué ancla antes y después del hábito más difícil?", items:[
       "Trabajé en bloques de 90 min sin interrupciones",
       "Hice un descanso guiado o siesta corta después de trabajar (NSDR)",
       "Bajé las luces al caer la noche",
       "Nada de pantallas brillantes después de las 10 pm"
     ]}
   ];
+
+  // Tarjeta "Mi ruta" — resumen visual arriba del plan
+  const buildRutaCard = () => {
+    const meta12 = load('meta12s', null);
+    const planStart = load('plan4_start', null);
+    const dashState = load(`dash_${todayKey()}`, {});
+    const dashItems = 8;
+    const dashDone = Object.values(dashState).filter(Boolean).length;
+    const pct = Math.round(dashDone / dashItems * 100);
+
+    // Semana actual del plan
+    let semanaActual = '—';
+    let diasRestantes = '';
+    if (planStart) {
+      const diff = Math.floor((Date.now() - new Date(planStart)) / 86400000);
+      const semNum = Math.min(Math.floor(diff / 7) + 1, 4);
+      semanaActual = `Semana ${semNum} de 4`;
+      const diasEnSemana = diff % 7;
+      diasRestantes = `${7 - diasEnSemana} días para la siguiente`;
+    }
+
+    // Próximo checkpoint 12S
+    let checkpoint = '—';
+    if (planStart && meta12) {
+      const diff = Math.floor((Date.now() - new Date(planStart)) / 86400000);
+      const semNum = Math.floor(diff / 7) + 1;
+      if (semNum <= 4) checkpoint = `Semana 4: ${meta12.h4 || 'sin definir'}`;
+      else if (semNum <= 8) checkpoint = `Semana 8: ${meta12.h8 || 'sin definir'}`;
+      else checkpoint = `Semana 12: ${meta12.h12 || 'sin definir'}`;
+    }
+
+    return `
+      <div class="card" style="background:var(--accent);color:#fff;border-color:var(--accent)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:.8rem;opacity:.8;margin-bottom:4px">Tu meta</div>
+            <div style="font-size:1.1rem;font-weight:700">${meta12?.meta || 'Sin definir — ve a Metas'}</div>
+            ${meta12?.porque ? `<div style="font-size:.85rem;opacity:.8;margin-top:2px">${meta12.porque}</div>` : ''}
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:.8rem;opacity:.8">Hoy</div>
+            <div style="font-size:1.4rem;font-weight:800">${pct}%</div>
+          </div>
+        </div>
+        <hr style="border-color:rgba(255,255,255,.2);margin:12px 0">
+        <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:.85rem">
+          <div><span style="opacity:.7">Plan · </span><strong>${semanaActual}</strong>${diasRestantes ? `<span style="opacity:.7"> · ${diasRestantes}</span>` : ''}</div>
+          ${checkpoint !== '—' ? `<div><span style="opacity:.7">Próximo checkpoint · </span><strong>${checkpoint}</strong></div>` : ''}
+        </div>
+        ${!planStart ? `<div style="margin-top:12px"><button id="btn-iniciar-plan" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);font-size:.85rem;padding:6px 12px">Iniciar plan desde hoy</button></div>` : ''}
+      </div>`;
+  };
+
+  const rutaWrap = document.createElement('div');
+  rutaWrap.innerHTML = buildRutaCard();
+  $("#plan").appendChild(rutaWrap);
+
+  // Botón iniciar plan
+  rutaWrap.addEventListener('click', e => {
+    if (e.target.id === 'btn-iniciar-plan') {
+      save('plan4_start', new Date().toISOString().slice(0, 10));
+      rutaWrap.innerHTML = buildRutaCard();
+    }
+  });
+
   const planWrap = document.createElement('div');
   const planState = load('plan4', {});
+  const planNotes = load('plan4_notes', {});
   planData.forEach(week=>{
     const card = document.createElement('div'); card.className='card';
-    card.innerHTML = `<h3 style="margin-top:0">${week.t}</h3><p style="margin:0 0 12px;color:var(--muted);font-size:.9rem">${week.desc}</p><div class="checklist" id="w${week.s}"></div>`;
+    card.innerHTML = `
+      <h3 style="margin-top:0">${week.t}</h3>
+      <p style="margin:0 0 12px;color:var(--muted);font-size:.9rem">${week.desc}</p>
+      <div class="checklist" id="w${week.s}"></div>
+      <div style="margin-top:12px">
+        <label style="font-weight:600;font-size:.9rem">Mi plan para esta semana</label>
+        <textarea id="plan_note_${week.s}" placeholder="${week.placeholder}" style="min-height:80px;margin-top:6px">${planNotes[`w${week.s}`]||''}</textarea>
+        <button class="secondary btn-save-note" data-week="${week.s}" style="margin-top:6px;padding:8px 12px;font-size:.85rem">Guardar</button>
+      </div>`;
     const list = card.querySelector('.checklist');
     week.items.forEach((txt,i)=>{
       const key = `w${week.s}_${i}`;
@@ -564,6 +638,16 @@
       list.appendChild(item);
     });
     planWrap.appendChild(card);
+  });
+  // Guardar notas del plan
+  planWrap.addEventListener('click', e => {
+    if (e.target.classList.contains('btn-save-note')) {
+      const w = e.target.dataset.week;
+      planNotes[`w${w}`] = document.getElementById(`plan_note_${w}`).value;
+      save('plan4_notes', planNotes);
+      e.target.textContent = '¡Guardado!';
+      setTimeout(() => e.target.textContent = 'Guardar', 1500);
+    }
   });
   $("#plan").appendChild(planWrap);
 
