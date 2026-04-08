@@ -675,20 +675,75 @@
   const mIds = ["meta","horas","porque","verbos","dias","ventana","h4","h8","h12","fracaso"];
   const mLoad = load('meta12s', null);
   if(mLoad){ mIds.forEach(id=>{ const el = document.getElementById('m_'+id); if(el) el.value = mLoad[id]||''; }); }
+
   const renderResumen = () => {
-    const data = mIds.reduce((acc,id)=>{ acc[id]=document.getElementById('m_'+id).value.trim(); return acc; },{});
+    const saved = load('meta12s', null);
     const box = $("#m_resumen");
-    if(!data.meta){ box.innerHTML = `<small class="muted">Aún no has guardado tu meta.</small>`; return; }
+    if(!saved || !saved.meta){ box.innerHTML = `<p style="color:var(--muted);font-size:.9rem">Rellena el formulario y guarda tu meta para verla aquí.</p>`; return; }
+    const d = saved;
+    const planStart = load('plan4_start', null);
+    let semActual = null;
+    if(planStart){
+      const diff = Math.floor((Date.now()-new Date(planStart))/86400000);
+      semActual = Math.min(Math.floor(diff/7)+1, 4);
+    }
+    const hitos = [
+      {sem:4, txt:d.h4, label:'Semana 4'},
+      {sem:8, txt:d.h8, label:'Semana 8'},
+      {sem:12, txt:d.h12, label:'Semana 12'}
+    ];
     box.innerHTML = `
-      <h4>Resumen</h4>
-      <p><strong>${data.meta}</strong> — ${data.horas||'?'}h/sem · ${data.dias||'—'} · ${data.ventana||'—'}</p>
-      <p><em>Por qué:</em> ${data.porque||'—'}</p>
-      <p><em>Verbos:</em> ${data.verbos||'—'}</p>
-      <p><em>Hitos:</em> 4:${data.h4||'—'} · 8:${data.h8||'—'} · 12:${data.h12||'—'}</p>
+      <div style="border-left:4px solid var(--accent);padding:16px;background:var(--bg);border-radius:0 12px 12px 0;margin-bottom:16px">
+        <div style="font-size:1.25rem;font-weight:800;margin-bottom:4px">${d.meta}</div>
+        ${d.porque ? `<div style="color:var(--muted);font-size:.95rem;margin-bottom:10px">${d.porque}</div>` : ''}
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          ${d.horas ? `<span class="badge" style="background:var(--accent);color:#fff;border:none">${d.horas}h / semana</span>` : ''}
+          ${d.dias ? `<span class="badge">${d.dias}</span>` : ''}
+          ${d.ventana ? `<span class="badge">${d.ventana}</span>` : ''}
+          ${d.verbos ? `<span class="badge">Acción: ${d.verbos}</span>` : ''}
+        </div>
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-weight:700;margin-bottom:10px;font-size:.9rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Checkpoints</div>
+        <div style="display:grid;gap:8px">
+          ${hitos.map(h=>{
+            const activo = semActual && Math.ceil(semActual/4*12) <= h.sem;
+            const pasado = semActual && Math.ceil(semActual/4*12) > h.sem;
+            const color = pasado ? 'var(--ok)' : activo ? 'var(--accent)' : 'var(--border)';
+            const icon = pasado ? '✓' : activo ? '→' : '·';
+            return `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid ${color};opacity:${!planStart||activo||pasado?1:.5}">
+              <span style="font-weight:800;color:${color};flex-shrink:0">${icon}</span>
+              <div>
+                <div style="font-size:.8rem;color:var(--muted)">${h.label}</div>
+                <div style="font-weight:600">${h.txt||'Sin definir'}</div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+      ${d.fracaso ? `
+      <div style="padding:12px;background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.2);border-radius:10px">
+        <div style="font-size:.8rem;font-weight:700;color:var(--danger);margin-bottom:4px">SI NO LO HACES</div>
+        <div style="font-size:.9rem;color:var(--fg)">${d.fracaso}</div>
+      </div>` : ''}
     `;
   };
   renderResumen();
-  $("#m_guardar").onclick = ()=>{ const data = mIds.reduce((a,id)=>{ a[id]=document.getElementById('m_'+id).value.trim(); return a; },{}); save('meta12s', data); renderResumen(); alert('Meta guardada'); };
+
+  const showToast = (msg, color='var(--ok)') => {
+    const t = document.createElement('div');
+    t.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:${color};color:#fff;padding:10px 20px;border-radius:999px;font-weight:700;font-size:.9rem;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,.2);transition:opacity .3s`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),300); }, 2000);
+  };
+
+  $("#m_guardar").onclick = ()=>{
+    const data = mIds.reduce((a,id)=>{ a[id]=document.getElementById('m_'+id).value.trim(); return a; },{});
+    save('meta12s', data);
+    renderResumen();
+    showToast('Meta guardada');
+  };
   $("#m_borrar").onclick = ()=>{ if(confirm('¿Borrar meta?')){ localStorage.removeItem('meta12s'); mIds.forEach(id=> document.getElementById('m_'+id).value=''); renderResumen(); } };
 
   // Evaluación semanal (destacada domingos)
@@ -707,15 +762,49 @@
   `;
   $("#metas").appendChild(evalWrap);
   if(new Date().getDay()===0){ evalWrap.style.outline='2px solid var(--accent)'; }
+  const cumplioColor = v => v==='Sí'?'var(--ok)':v==='Más o menos'?'var(--warn)':'var(--danger)';
+  const cumplioIcon = v => v==='Sí'?'✓':v==='Más o menos'?'~':'✗';
+
   const renderHist = ()=>{
     const hist = load('evals', []);
     const box = $("#e_hist");
-    if(hist.length===0){ box.innerHTML = `<small class="muted">Sin evaluaciones aún.</small>`; return; }
-    box.innerHTML = `<details><summary>Historial (${hist.length})</summary>` + hist.map(h=>`<div style="margin:8px 0;padding:8px;border:1px solid var(--border);border-radius:10px"><strong>${h.fecha}</strong> — ${h.horas||'—'} · ${h.horas_real||'—'}h<br><em>Obstáculo:</em> ${h.obstaculo||'—'}<br><em>Ajuste:</em> ${h.ajuste||'—'}</div>`).join('') + `</details>`;
+    if(hist.length===0){ box.innerHTML = `<p style="color:var(--muted);font-size:.9rem">Aquí verás tu historial semanal cuando guardes la primera evaluación.</p>`; return; }
+    box.innerHTML = hist.map((h,i)=>{
+      const prev = hist[i+1];
+      const hrs = parseFloat(h.horas_real)||0;
+      const prevHrs = prev ? parseFloat(prev.horas_real)||0 : null;
+      let trend = '';
+      if(prevHrs !== null && hrs !== prevHrs){
+        const diff = (hrs - prevHrs).toFixed(1);
+        const up = hrs > prevHrs;
+        trend = `<span style="color:${up?'var(--ok)':'var(--danger)'};font-weight:700;font-size:.85rem">${up?'↑':'↓'}${Math.abs(diff)}h vs semana anterior</span>`;
+      } else if(prevHrs !== null && hrs === prevHrs) {
+        trend = `<span style="color:var(--muted);font-size:.85rem">= igual que la semana anterior</span>`;
+      }
+      const color = cumplioColor(h.horas);
+      const icon = cumplioIcon(h.horas);
+      return `
+        <div style="padding:14px;border:1px solid var(--border);border-left:4px solid ${color};border-radius:0 12px 12px 0;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+            <div style="font-weight:700">${h.fecha}</div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="background:${color};color:#fff;padding:3px 10px;border-radius:999px;font-size:.8rem;font-weight:700">${icon} ${h.horas||'—'}</span>
+              ${h.horas_real ? `<span class="badge">${h.horas_real}h reales</span>` : ''}
+              ${trend}
+            </div>
+          </div>
+          ${h.obstaculo ? `<div style="font-size:.88rem;margin-bottom:4px"><span style="color:var(--muted);font-weight:600">Obstáculo · </span>${h.obstaculo}</div>` : ''}
+          ${h.ajuste ? `<div style="font-size:.88rem"><span style="color:var(--muted);font-weight:600">Cambio · </span>${h.ajuste}</div>` : ''}
+        </div>`;
+    }).join('');
   };
+
   $("#e_guardar").onclick = ()=>{
     const rec = { fecha: todayKey(), horas: $("#e_horas").value, horas_real: $("#e_horas_real").value, obstaculo: $("#e_obstaculo").value.trim(), ajuste: $("#e_ajuste").value.trim() };
-    const hist = load('evals', []); hist.unshift(rec); save('evals', hist.slice(0,52)); alert('Evaluación guardada'); renderHist();
+    const hist = load('evals', []); hist.unshift(rec); save('evals', hist.slice(0,52));
+    showToast('Semana guardada');
+    $("#e_horas").value=''; $("#e_horas_real").value=''; $("#e_obstaculo").value=''; $("#e_ajuste").value='';
+    renderHist();
   };
   $("#e_ver").onclick = renderHist;
   renderHist();
@@ -851,7 +940,7 @@
   const jKey = d=>`journal_${d}`;
   const jstate = load(jKey(todayKey()), {text:""});
   $("#j_text").value = jstate.text||"";
-  $("#j_guardar").onclick = ()=>{ save(jKey(todayKey()), {text: $("#j_text").value.trim(), qs}); alert('Entrada guardada'); };
+  $("#j_guardar").onclick = ()=>{ save(jKey(todayKey()), {text: $("#j_text").value.trim(), qs}); showToast('Entrada guardada'); };
   $("#j_ver").onclick = ()=>{
     const keys = Object.keys(localStorage).filter(k=>k.startsWith('journal_')).sort().reverse().slice(0,14);
     const html = keys.map(k=>{
