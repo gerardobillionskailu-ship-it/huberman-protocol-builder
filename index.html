@@ -80,6 +80,14 @@
 <main>
   <!-- PROTOCOLOS -->
   <section id="protocolos" class="panel">
+    <div class="card" style="border-left:4px solid var(--accent-2);background:var(--card)">
+      <h3 style="margin-top:0;font-size:1rem">Cómo funciona esta pantalla</h3>
+      <p style="margin:0;color:var(--muted);font-size:.9rem;line-height:1.6">
+        Busca por nombre o elige según cómo te sientes. Te devuelve los <strong>pasos exactos</strong> del protocolo con la fuente del episodio — sin resúmenes, sin interpretaciones.<br>
+        Los 8 protocolos están extraídos de 17 episodios de Huberman Lab y funcionan <strong>sin internet</strong>.
+        Si no sabes qué elegir, usa el desplegable <em>"¿Cómo estás ahora?"</em>.
+      </p>
+    </div>
     <div class="card">
       <label for="search">Busca un protocolo</label>
       <input id="search" type="search" placeholder="Ej: space-time bridging, baseline dopamina, regla 15% error..." autocomplete="off">
@@ -655,7 +663,10 @@
   const metasForm = document.createElement('div'); metasForm.className='card';
   metasForm.innerHTML = `
     <h3 style="margin-top:0">Tu meta para las próximas 12 semanas</h3>
-    <p style="margin:0 0 16px;color:var(--muted);font-size:.9rem">Rellénalo una vez. Cada domingo revisas si vas bien.</p>
+    <div style="background:var(--bg);border:1px solid var(--border);border-left:4px solid var(--accent-2);border-radius:0 10px 10px 0;padding:12px;margin-bottom:16px;font-size:.88rem;color:var(--muted);line-height:1.6">
+      <strong style="color:var(--fg)">¿Por qué los campos conservan lo que escribiste?</strong><br>
+      Tu meta no cambia cada semana — la defines una vez y la revisas. Si algo cambia (horas, días, checkpoint), edita y vuelve a guardar. La <strong>revisión semanal</strong> está más abajo: ahí es donde registras cómo fue la semana.
+    </div>
     <div class="grid grid-2">
       <div><label>¿Qué quieres lograr?</label><input id="m_meta" type="text" placeholder="Ej: Terminar el borrador de mi tesis"></div>
       <div><label>¿Cuántas horas a la semana?</label><input id="m_horas" type="number" min="0" step="0.5" placeholder="6"></div>
