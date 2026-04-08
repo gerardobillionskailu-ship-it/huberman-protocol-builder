@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Huberman Protocol Builder</title>
+<style>
+  :root{
+    --bg:#ffffff; --fg:#0f172a; --muted:#64748b; --card:#f8fafc; --border:#e2e8f0;
+    --accent:#2563eb; --accent-2:#0ea5e9; --ok:#16a34a; --warn:#ea580c; --danger:#dc2626;
+    --radius:16px; --shadow:0 4px 20px rgba(0,0,0,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0b0f19; --fg:#e5e7eb; --muted:#94a3b8; --card:#111827; --border:#1f2937;
+      --accent:#3b82f6; --accent-2:#22d3ee; --ok:#22c55e; --warn:#f97316; --danger:#ef4444;
+      --shadow:0 4px 20px rgba(0,0,0,.4);
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+  header{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:1px solid var(--border)}
+  .header-inner{max-width:900px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  h1{font-size:1.1rem;margin:0;font-weight:700;letter-spacing:.2px}
+  .tabs{display:flex;gap:6px;overflow-x:auto;padding:0 12px 12px;max-width:900px;margin:0 auto}
+  .tab{appearance:none;border:1px solid var(--border);background:var(--card);color:var(--fg);padding:10px 14px;border-radius:999px;font-weight:600;white-space:nowrap;cursor:pointer}
+  .tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  main{max-width:900px;margin:0 auto;padding:16px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);margin-bottom:16px}
+  label{display:block;font-weight:600;margin-bottom:6px}
+  input[type="text"],input[type="search"],input[type="number"],textarea,select{width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:1rem}
+  textarea{min-height:100px;resize:vertical}
+  button{appearance:none;border:none;background:var(--accent);color:#fff;padding:12px 16px;border-radius:12px;font-weight:700;font-size:1rem;cursor:pointer}
+  button.secondary{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+  button.link{background:transparent;color:var(--accent-2);padding:0;font-weight:600}
+  .grid{display:grid;gap:12px}
+  .grid-2{grid-template-columns:1fr}
+  @media(min-width:720px){.grid-2{grid-template-columns:1fr 1fr}}
+  .checklist{display:grid;gap:10px}
+  .check-item{display:flex;align-items:center;gap:12px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px}
+  .check-item input{width:22px;height:22px}
+  .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:var(--bg);border:1px solid var(--border);font-size:.8rem;color:var(--muted)}
+  .progress{height:10px;background:var(--bg);border:1px solid var(--border);border-radius:999px;overflow:hidden}
+  .progress>span{display:block;height:100%;background:var(--accent);width:0%}
+  footer{max-width:900px;margin:24px auto;padding:16px;color:var(--muted);font-size:.9rem;text-align:center}
+  .tooltip{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
+  .tooltip .card{max-width:560px}
+  .kbd{font-family:ui-monospace,monospace;background:var(--bg);border:1px solid var(--border);border-bottom-width:2px;border-radius:6px;padding:2px 6px;font-size:.85em}
+  small.muted{color:var(--muted)}
+  ol{padding-left:20px}
+  hr{border:none;border-top:1px solid var(--border);margin:16px 0}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <h1>🧠 Huberman Protocol Builder</h1>
+    <span class="badge">Local • Sin cuenta</span>
+  </div>
+  <nav class="tabs" role="tablist" aria-label="Secciones">
+    <button class="tab active" data-tab="protocolos" role="tab" aria-selected="true">Protocolos</button>
+    <button class="tab" data-tab="plan" role="tab">Plan 4 Semanas</button>
+    <button class="tab" data-tab="metas" role="tab">Metas 12S</button>
+    <button class="tab" data-tab="dashboard" role="tab">Dashboard</button>
+    <button class="tab" data-tab="dopamina" role="tab">Dopamina</button>
+    <button class="tab" data-tab="journal" role="tab">Journal</button>
+  </nav>
+</header>
+
+<main>
+  <!-- PROTOCOLOS -->
+  <section id="protocolos" class="panel">
+    <div class="card">
+      <label for="search">Busca un protocolo</label>
+      <input id="search" type="search" placeholder="Ej: space-time bridging, baseline dopamina, regla 15% error..." autocomplete="off">
+      <div style="margin-top:12px">
+        <label for="proto_select" style="margin-bottom:6px">O elige un protocolo directamente</label>
+        <select id="proto_select">
+          <option value="">— Selecciona un protocolo —</option>
+          <optgroup label="Protocolos principales">
+            <option value="space-time bridging">Space-Time Bridging — perspectiva y foco</option>
+            <option value="evaluación semanal">Evaluación Semanal de Metas</option>
+            <option value="baseline dopamina">Reset Baseline Dopamina</option>
+            <option value="regla 15% error">Regla del 15% de Error — aprendizaje óptimo</option>
+            <option value="visualizar fracaso">Visualizar Fracaso — días bajos</option>
+            <option value="bloques 90 minutos">Bloques 90 min — ciclos ultradianos</option>
+            <option value="nsdr">NSDR / Yoga Nidra — descanso profundo</option>
+            <option value="task bracketing">Task Bracketing — hábitos por fases del día</option>
+          </optgroup>
+          <optgroup label="¿Cómo estás ahora?">
+            <option value="motivación baja">Motivación baja — dame un protocolo</option>
+            <option value="baseline dopamina">Me cuesta arrancar — reset dopamina</option>
+            <option value="visualizar fracaso">Estoy en un día bajo — activa la amígdala</option>
+            <option value="nsdr">Necesito recuperar foco rápido — NSDR</option>
+            <option value="regla 15% error">Quiero aprender algo nuevo más rápido</option>
+            <option value="bloques 90 minutos">Quiero entrar en modo trabajo profundo</option>
+            <option value="evaluación semanal">Es domingo — quiero hacer mi evaluación semanal</option>
+            <option value="space-time bridging">Antes de trabajar en mi meta — ampliar perspectiva</option>
+            <option value="task bracketing">Quiero construir un hábito nuevo</option>
+          </optgroup>
+        </select>
+      </div>
+    </div>
+    <div id="protocol-results"></div>
+    <div class="card">
+      <h3 style="margin-top:0">Protocolos disponibles</h3>
+      <p><small class="muted">Extraídos de 17 episodios · disponibles offline.</small></p>
+      <ul>
+        <li><strong>Space-Time Bridging</strong> — 90s a 3min · perspectiva temporal</li>
+        <li><strong>Evaluación Semanal de Metas</strong> — Goals Toolkit</li>
+        <li><strong>Reset Baseline Dopamina</strong> — motivación y foco</li>
+        <li><strong>Regla 15% de Error</strong> — aprendizaje óptimo</li>
+        <li><strong>Visualizar Fracaso</strong> — activación en días bajos</li>
+        <li><strong>Bloques 90 min</strong> — ciclos ultradianos de trabajo</li>
+        <li><strong>NSDR / Yoga Nidra</strong> — +65% dopamina, consolida aprendizaje</li>
+        <li><strong>Task Bracketing</strong> — hábitos por fases del día</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- PLAN 4 SEMANAS -->
+  <section id="plan" class="panel" hidden></section>
+
+  <!-- METAS 12S -->
+  <section id="metas" class="panel" hidden></section>
+
+  <!-- DASHBOARD -->
+  <section id="dashboard" class="panel" hidden></section>
+
+  <!-- DOPAMINA -->
+  <section id="dopamina" class="panel" hidden></section>
+
+  <!-- JOURNAL -->
+  <section id="journal" class="panel" hidden></section>
+</main>
+
+<footer>Datos guardados localmente · Funciona offline</footer>
+
+<script>
+(() => {
+  // --- Utilidades básicas ---
+  const $ = s => document.querySelector(s);
+  const $$ = s => Array.from(document.querySelectorAll(s));
+  const todayKey = () => new Date().toISOString().slice(0,10);
+  const load = (k, d=null) => { try { const v = localStorage.getItem(k); return v? JSON.parse(v): d } catch { return d } };
+  const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+
+  // --- Tabs ---
+  const tabs = $$('.tab');
+  const panels = $$('.panel');
+  const showTab = (id) => {
+    tabs.forEach(t=>t.classList.toggle('active', t.dataset.tab===id));
+    panels.forEach(p=>p.hidden = p.id!==id);
+    save('activeTab', id);
+  };
+  tabs.forEach(t=> t.addEventListener('click', ()=> showTab(t.dataset.tab)));
+  showTab(load('activeTab','protocolos'));
+
+  // --- Onboarding (tooltip primera vez) ---
+  if(!load('onboarding_done', false)){
+    const tip = document.createElement('div');
+    tip.className='tooltip';
+    tip.innerHTML = `<div class="card"><h2>Hola 👋</h2>
+      <p>Todo se guarda en tu navegador. Sin cuenta, sin internet.</p>
+      <ul>
+        <li><span class="kbd">Protocolos</span>: busca qué hacer según cómo te sientes.</li>
+        <li><span class="kbd">Plan 4 semanas</span>: casillas que marcas cada día.</li>
+        <li><span class="kbd">Metas</span>: define tu meta una vez y revísala cada domingo.</li>
+      </ul>
+      <p><small class="muted">Cierra cuando quieras. Todo sigue aquí cuando vuelvas.</small></p>
+      <div style="text-align:right"><button id="okTip">Empezar</button></div></div>`;
+    document.body.appendChild(tip);
+    $('#okTip').onclick = ()=>{ save('onboarding_done', true); tip.remove(); };
+  }
+
+  // --- PROTOCOLOS (Extractor) ---
+  const PROTOCOLS = {
+    "space-time bridging": {
+      titulo:"Space-Time Bridging (90s–3min)",
+      cita:"How to Set & Achieve Goals | Huberman Lab Essentials · The Science of Setting & Achieving Goals",
+      pasos:[
+        "Cierra los ojos, 100% atención interna (interocepción): respiración, frecuencia cardíaca, superficie de la piel. 3 respiraciones lentas.",
+        "Abre los ojos, enfoca la palma de tu mano. 90% atención interna, 10% externa. 3 respiraciones.",
+        "Mueve la mirada a un objeto a 1.5–4.5 m de ti. 90% atención externa, 10% interna. 3 respiraciones.",
+        "Desplaza la vista al horizonte o el punto más lejano posible. 99–100% atención externa. 3 respiraciones.",
+        "Expande la visión panorámica (magnocelular): ve todo el campo visual sin fijar un punto. 3 respiraciones.",
+        "Regresa a paisaje interno, ojos cerrados. 100% interocepción. 3 respiraciones.",
+        "Repite el ciclo completo 2–3 veces. Total: 90 segundos a 3 minutos."
+      ],
+      notas:"1 vez al día, ideal antes de un bloque de trabajo o al inicio de la jornada. Amplía la perspectiva temporal y prepara el cerebro para enfocarse en metas."
+    },
+    "evaluación semanal": {
+      titulo:"Evaluación Semanal de Metas",
+      cita:"The Science of Setting & Achieving Goals · How to Set & Achieve Goals | Huberman Lab Essentials",
+      pasos:[
+        "Limita a 1–3 metas principales por año. Más opciones = distracción visual y cognitiva.",
+        "Evalúa 1 vez por semana: mira la semana anterior, mide cuántas veces cumpliste (o evitaste) los comportamientos concretos.",
+        "Actualiza el plan de acción específico para la semana entrante basado en el desempeño real.",
+        "Recompénsate cognitivamente si vas por buen camino (marca la casilla, dite que estás cumpliendo). Esto libera dopamina y sostiene la motivación.",
+        "En días bajos: visualiza el fracaso en detalle (ver protocolo 'Visualizar Fracaso') para reactivar la amígdala."
+      ],
+      notas:"Recomendada los domingos. Frecuencia semanal es la más manejable según la investigación."
+    },
+    "baseline dopamina": {
+      titulo:"Reset de Baseline de Dopamina",
+      cita:"Improve Your Baseline Dopamine for Motivation & Drive | Dr. Andrew Huberman · How to Increase Motivation & Drive | Huberman Lab Essentials",
+      pasos:[
+        "Sueño: cantidad suficiente cada noche — repone físicamente las reservas de dopamina.",
+        "NSDR / Yoga Nidra: 10, 20 o 30 min. Incrementa reservas de dopamina hasta un 65%. (ver protocolo NSDR)",
+        "Tirosina: come fuentes ricas (queso parmesano, carnes, nueces, ciertas verduras) cada 24h — es el precursor directo de la dopamina.",
+        "Luz solar matutina: 5–10 min días despejados · 10–20 min días nublados · 20–30 min días muy nublados. Sin gafas de sol.",
+        "Ejercicio: mezcla cardio + resistencia ≥5 días/semana para mantener baseline elevado.",
+        "Recompensas intermitentes: suprime la recompensa en algunos logros intermedios, en horario impredecible (ej: celebra 3 veces seguidas, luego 10 días sin recompensa). Evita caídas bruscas de motivación."
+      ],
+      notas:"No apiles picos de dopamina (redes + azúcar + música intensa + preworkout al mismo tiempo). El apilamiento sube el pico pero baja más el baseline después."
+    },
+    "regla 15% error": {
+      titulo:"Regla del 15% de Error (Aprendizaje Óptimo)",
+      cita:"The Best Way To Set Your Goals | Andrew Huberman · The Science of Setting & Achieving Goals",
+      pasos:[
+        "Ajusta la dificultad para lograr ~85% acierto / ~15% error. Ese es el punto óptimo de neuroplasticidad.",
+        "Cambia tu relación con los errores: la frustración al errar activa el sistema de alerta del cerebro y aumenta la plasticidad para los intentos siguientes.",
+        "Si aciertas >80–85% con facilidad: sube la dificultad.",
+        "Si fallas >20%: baja la dificultad. Si fallas ~50%, la tarea es demasiado difícil.",
+        "Trabaja en bloques de 90 min con feedback inmediato al final.",
+        "Duerme bien: la neuroplasticidad y consolidación ocurren durante el sueño profundo."
+      ],
+      notas:"Aplica a cualquier habilidad: idiomas, deporte, instrumentos, escritura, código."
+    },
+    "visualizar fracaso": {
+      titulo:"Visualizar Fracaso (Activación para Días Bajos)",
+      cita:"How to Set & Achieve Goals | Huberman Lab Essentials",
+      pasos:[
+        "No dependas de visualizar el éxito — baja la presión arterial y quita motivación si se usa en exceso.",
+        "Enfócate en el fracaso: imagina con todo detalle qué pasa si no cumples hoy.",
+        "Sé específico: consecuencias de salud, decepción personal, impacto a corto y largo plazo.",
+        "Esto activa la amígdala y sube la presión arterial sistólica — señal de alerta que pone el cuerpo en modo acción.",
+        "Escribe las consecuencias concretas en 2–3 líneas.",
+        "Ejecuta la primera acción mínima ahora mismo (2 minutos)."
+      ],
+      notas:"Visualizar el fracaso casi duplica (~100% de aumento) la probabilidad de alcanzar la meta vs. solo visualizar el éxito."
+    },
+    "bloques 90 minutos": {
+      titulo:"Bloques de Trabajo 90 Min (Ciclos Ultradianos)",
+      cita:"Maximize Productivity, Physical & Mental Health With Daily Tools | Huberman Lab Essentials · How to Focus to Change Your Brain | Huberman Lab Essentials",
+      pasos:[
+        "Sincroniza: inicia el bloque 4–6 horas después de tu temperatura corporal mínima (aprox. 2h antes de despertar = tu hora ideal de arranque).",
+        "Apaga el teléfono por completo (no modo avión). Ruido blanco a volumen bajo si ayuda.",
+        "Pon un temporizador de exactamente 90 minutos — el cerebro opera en ciclos ultradianos de esta duración.",
+        "Primeros 5–10 min de calentamiento: es normal que la atención divague. Redirige sin frustrarte.",
+        "Hora central: concentración intensa, entra en el 'túnel' de trabajo profundo.",
+        "Al terminar: 5–10 min de NSDR o inactividad para consolidar lo aprendido."
+      ],
+      notas:"No fuerces más de 2 bloques seguidos. El cerebro necesita el descanso entre ciclos para consolidar."
+    },
+    "nsdr": {
+      titulo:"NSDR / Yoga Nidra (Descanso Profundo Sin Dormir)",
+      cita:"Improve Your Baseline Dopamine for Motivation & Drive | Dr. Andrew Huberman · How to Focus to Change Your Brain | Huberman Lab Essentials",
+      pasos:[
+        "Acuéstate boca arriba, pies ligeramente elevados, ojos cerrados.",
+        "Pon un audio guiado de NSDR o Yoga Nidra: 10, 20 o 30 minutos.",
+        "El audio te guía por escaneo corporal y respiraciones con exhalaciones largas.",
+        "Usa inmediatamente después de un bloque de 90 min: acelera la consolidación de memoria y neuroplasticidad.",
+        "Úsalo también para restaurar reservas de dopamina hasta un 65% (motivación y foco)."
+      ],
+      notas:"Busca 'NSDR Huberman' o 'Yoga Nidra 10 min' en YouTube. No es meditación — es descanso activo guiado."
+    },
+    "task bracketing": {
+      titulo:"Task Bracketing (Hábitos por Fases del Día)",
+      cita:"The Science of Making & Breaking Habits | Huberman Lab Essentials",
+      pasos:[
+        "FASE 1 (0–8h tras despertar): hábitos de alta fricción y esfuerzo. Aprovechas el pico natural de dopamina, adrenalina y noradrenalina → máxima orientación a la acción.",
+        "FASE 2 (9–15h tras despertar): hábitos relajantes y de baja fricción (diario, idioma, instrumento). El cortisol baja, la serotonina sube → estado más relajado y creativo.",
+        "FASE 3 (16–24h tras despertar): sueño profundo en habitación oscura y fría. Aquí ocurre la neuroplasticidad que consolida los hábitos del día en el 'disco duro'.",
+        "Agrupa el hábito entre dos anclas fijas (task bracketing): algo que siempre haces antes + algo que siempre haces después. Esto automatiza el disparador sin depender de fuerza de voluntad."
+      ],
+      notas:"Los hábitos más difíciles van en Fase 1. Los más fáciles en Fase 2. El sueño en Fase 3 no es opcional — es donde el hábito se graba."
+    }
+  };
+  // alias para búsquedas comunes
+  PROTOCOLS["space time bridging"] = PROTOCOLS["space-time bridging"];
+  PROTOCOLS["evaluacion semanal"] = PROTOCOLS["evaluación semanal"];
+  PROTOCOLS["reset baseline dopamina"] = PROTOCOLS["baseline dopamina"];
+  PROTOCOLS["motivación baja"] = PROTOCOLS["baseline dopamina"];
+  PROTOCOLS["motivacion baja"] = PROTOCOLS["baseline dopamina"];
+  PROTOCOLS["dame mi protocolo de hoy para motivación baja"] = PROTOCOLS["baseline dopamina"];
+  PROTOCOLS["regla 15% de error"] = PROTOCOLS["regla 15% error"];
+  PROTOCOLS["regla 15"] = PROTOCOLS["regla 15% error"];
+  PROTOCOLS["aprendizaje"] = PROTOCOLS["regla 15% error"];
+  PROTOCOLS["fracaso"] = PROTOCOLS["visualizar fracaso"];
+  PROTOCOLS["días bajos"] = PROTOCOLS["visualizar fracaso"];
+  PROTOCOLS["dias bajos"] = PROTOCOLS["visualizar fracaso"];
+  PROTOCOLS["90 minutos"] = PROTOCOLS["bloques 90 minutos"];
+  PROTOCOLS["bloques de trabajo"] = PROTOCOLS["bloques 90 minutos"];
+  PROTOCOLS["ciclos ultradianos"] = PROTOCOLS["bloques 90 minutos"];
+  PROTOCOLS["yoga nidra"] = PROTOCOLS["nsdr"];
+  PROTOCOLS["descanso profundo"] = PROTOCOLS["nsdr"];
+  PROTOCOLS["hábitos"] = PROTOCOLS["task bracketing"];
+  PROTOCOLS["habitos"] = PROTOCOLS["task bracketing"];
+  PROTOCOLS["task bracket"] = PROTOCOLS["task bracketing"];
+
+  const searchInput = $("#search");
+  const results = $("#protocol-results");
+  const renderProtocol = (p) => {
+    const div = document.createElement('div');
+    div.className='card';
+    div.innerHTML = `
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+        <h3 style="margin:0">${p.titulo}</h3>
+        <span class="badge">${p.cita}</span>
+      </div>
+      <ol>${p.pasos.map(s=>`<li>${s}</li>`).join('')}</ol>
+      ${p.notas?`<p><small class="muted">${p.notas}</small></p>`:''}
+    `;
+    return div;
+  };
+  const doSearch = (q) => {
+    results.innerHTML='';
+    const query = (q||'').trim().toLowerCase();
+    if(!query) return;
+    // ejemplo directo motivación baja
+    if((query.includes('dame mi protocolo') && query.includes('motivación baja')) || query.includes('motivacion baja')){
+      results.appendChild(renderProtocol(PROTOCOLS["baseline dopamina"]));
+      return;
+    }
+    const keys = Object.keys(PROTOCOLS);
+    const matches = keys.filter(k => k.includes(query) || PROTOCOLS[k].titulo.toLowerCase().includes(query));
+    if(matches.length===0){
+      const card = document.createElement('div');
+      card.className='card';
+      card.innerHTML = `<p>No encontrado. Prueba con: <em>space-time bridging</em>, <em>evaluación semanal</em>, <em>baseline dopamina</em>, <em>regla 15% error</em>, <em>visualizar fracaso</em>.</p>`;
+      results.appendChild(card);
+      return;
+    }
+    const seen = new Set();
+    matches.forEach(k=>{
+      const p = PROTOCOLS[k];
+      if(seen.has(p.titulo)) return;
+      seen.add(p.titulo);
+      results.appendChild(renderProtocol(p));
+    });
+  };
+  searchInput.addEventListener('input', e=> doSearch(e.target.value));
+
+  // Dropdown de protocolos
+  const protoSelect = document.getElementById('proto_select');
+  protoSelect.addEventListener('change', ()=>{
+    const val = protoSelect.value;
+    if(!val) return;
+    searchInput.value = val;
+    doSearch(val);
+    protoSelect.value = ''; // reset para que se pueda seleccionar de nuevo
+  });
+
+  // Soporte ?q=
+  const params = new URLSearchParams(location.search);
+  if(params.get('q')){ searchInput.value=params.get('q'); doSearch(params.get('q')); }
+  if(params.get('example')==='1'){ searchInput.value='dame mi protocolo de hoy para motivación baja'; doSearch(searchInput.value); }
+
+  // --- PLAN 4 SEMANAS ---
+  const planData = [
+    {s:1, t:"Semana 1 — Define tu meta", desc:"Una sola meta. Sin eso, lo demás no funciona.", items:[
+      "Escribí mi meta principal (una, no cinco)",
+      "Elegí la acción exacta que voy a hacer (ej: escribir, correr, estudiar — no 'trabajar en')",
+      "Puse mis tres checkpoints: qué habré logrado en la semana 4, 8 y 12"
+    ]},
+    {s:2, t:"Semana 2 — Cuida tu energía", desc:"Pequeños hábitos físicos que mantienen la motivación alta.", items:[
+      "Salí al sol por la mañana (10 min mínimo, sin gafas)",
+      "Esperé al menos 90 min antes del primer café",
+      "No combiné redes + música intensa + café todo a la vez",
+      "Me duché con agua fría al menos 1 minuto"
+    ]},
+    {s:3, t:"Semana 3 — Entrena el modo mental", desc:"Cómo piensas en los días malos determina si sigues o no.", items:[
+      "En un momento difícil, me pregunté: ¿qué pierdo si no lo hago?",
+      "Me felicité por hacer la acción, no solo por el resultado",
+      "Cuando sentí presión, la usé como señal de que algo importa"
+    ]},
+    {s:4, t:"Semana 4 — Instala la rutina", desc:"El objetivo no es la fuerza de voluntad, es que sea automático.", items:[
+      "Trabajé en bloques de 90 min sin interrupciones",
+      "Hice un descanso guiado o siesta corta después de trabajar (NSDR)",
+      "Bajé las luces al caer la noche",
+      "Nada de pantallas brillantes después de las 10 pm"
+    ]}
+  ];
+  const planWrap = document.createElement('div');
+  const planState = load('plan4', {});
+  planData.forEach(week=>{
+    const card = document.createElement('div'); card.className='card';
+    card.innerHTML = `<h3 style="margin-top:0">${week.t}</h3><p style="margin:0 0 12px;color:var(--muted);font-size:.9rem">${week.desc}</p><div class="checklist" id="w${week.s}"></div>`;
+    const list = card.querySelector('.checklist');
+    week.items.forEach((txt,i)=>{
+      const key = `w${week.s}_${i}`;
+      const item = document.createElement('label'); item.className='check-item';
+      item.innerHTML = `<input type="checkbox" ${planState[key]?'checked':''}><span>${txt}</span>`;
+      const cb = item.querySelector('input');
+      cb.addEventListener('change', ()=>{ planState[key]=cb.checked; save('plan4', planState); });
+      list.appendChild(item);
+    });
+    planWrap.appendChild(card);
+  });
+  $("#plan").appendChild(planWrap);
+
+  // --- METAS 12 SEMANAS ---
+  const metasForm = document.createElement('div'); metasForm.className='card';
+  metasForm.innerHTML = `
+    <h3 style="margin-top:0">Tu meta para las próximas 12 semanas</h3>
+    <p style="margin:0 0 16px;color:var(--muted);font-size:.9rem">Rellénalo una vez. Cada domingo revisas si vas bien.</p>
+    <div class="grid grid-2">
+      <div><label>¿Qué quieres lograr?</label><input id="m_meta" type="text" placeholder="Ej: Terminar el borrador de mi tesis"></div>
+      <div><label>¿Cuántas horas a la semana?</label><input id="m_horas" type="number" min="0" step="0.5" placeholder="6"></div>
+      <div><label>¿Por qué te importa?</label><textarea id="m_porque" placeholder="Qué cambia en tu vida si lo logras"></textarea></div>
+      <div><label>¿Qué acción concreta vas a hacer?</label><input id="m_verbos" type="text" placeholder="Ej: escribir, correr, estudiar (no 'trabajar en')"></div>
+      <div><label>¿Qué días?</label><input id="m_dias" type="text" placeholder="Lunes, miércoles, viernes"></div>
+      <div><label>¿A qué hora?</label><input id="m_ventana" type="text" placeholder="07:00 – 08:30"></div>
+      <div><label>¿Qué habrás logrado en la semana 4?</label><input id="m_h4" type="text" placeholder="Ej: 3 capítulos escritos"></div>
+      <div><label>¿Y en la semana 8?</label><input id="m_h8" type="text" placeholder="Ej: primer borrador completo"></div>
+      <div><label>¿Y al final, en la semana 12?</label><input id="m_h12" type="text" placeholder="Ej: entregado y revisado"></div>
+      <div style="grid-column:1/-1"><label>¿Qué pasa si NO lo haces? (escríbelo con detalle)</label><textarea id="m_fracaso" placeholder="Ej: Me quedo sin beca, pierdo un año, decepciono a..."></textarea></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px"><button id="m_guardar">Guardar meta</button><button id="m_borrar" class="secondary">Borrar</button></div>
+    <hr><div id="m_resumen"></div>
+  `;
+  $("#metas").appendChild(metasForm);
+  const mIds = ["meta","horas","porque","verbos","dias","ventana","h4","h8","h12","fracaso"];
+  const mLoad = load('meta12s', null);
+  if(mLoad){ mIds.forEach(id=>{ const el = document.getElementById('m_'+id); if(el) el.value = mLoad[id]||''; }); }
+  const renderResumen = () => {
+    const data = mIds.reduce((acc,id)=>{ acc[id]=document.getElementById('m_'+id).value.trim(); return acc; },{});
+    const box = $("#m_resumen");
+    if(!data.meta){ box.innerHTML = `<small class="muted">Aún no has guardado tu meta.</small>`; return; }
+    box.innerHTML = `
+      <h4>Resumen</h4>
+      <p><strong>${data.meta}</strong> — ${data.horas||'?'}h/sem · ${data.dias||'—'} · ${data.ventana||'—'}</p>
+      <p><em>Por qué:</em> ${data.porque||'—'}</p>
+      <p><em>Verbos:</em> ${data.verbos||'—'}</p>
+      <p><em>Hitos:</em> 4:${data.h4||'—'} · 8:${data.h8||'—'} · 12:${data.h12||'—'}</p>
+    `;
+  };
+  renderResumen();
+  $("#m_guardar").onclick = ()=>{ const data = mIds.reduce((a,id)=>{ a[id]=document.getElementById('m_'+id).value.trim(); return a; },{}); save('meta12s', data); renderResumen(); alert('Meta guardada'); };
+  $("#m_borrar").onclick = ()=>{ if(confirm('¿Borrar meta?')){ localStorage.removeItem('meta12s'); mIds.forEach(id=> document.getElementById('m_'+id).value=''); renderResumen(); } };
+
+  // Evaluación semanal (destacada domingos)
+  const evalWrap = document.createElement('div'); evalWrap.className='card';
+  evalWrap.innerHTML = `
+    <h3 style="margin-top:0">Revisión de la semana</h3>
+    <p><small class="muted">Para los domingos. 5 minutos y ya.</small></p>
+    <div class="grid grid-2">
+      <div><label>¿Cumpliste las horas que habías planeado?</label><select id="e_horas"><option value="">—</option><option>Sí</option><option>Más o menos</option><option>No</option></select></div>
+      <div><label>¿Cuántas horas hiciste de verdad?</label><input id="e_horas_real" type="number" min="0" step="0.5"></div>
+      <div style="grid-column:1/-1"><label>¿Qué te lo dificultó o impidió?</label><textarea id="e_obstaculo" placeholder="Sin juicio, solo para entender qué pasó"></textarea></div>
+      <div style="grid-column:1/-1"><label>¿Qué cambias la semana que viene?</label><textarea id="e_ajuste" placeholder="Un ajuste concreto, no una lista de propósitos"></textarea></div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px"><button id="e_guardar">Guardar</button><button id="e_ver" class="secondary">Ver semanas anteriores</button></div>
+    <div id="e_hist" style="margin-top:12px"></div>
+  `;
+  $("#metas").appendChild(evalWrap);
+  if(new Date().getDay()===0){ evalWrap.style.outline='2px solid var(--accent)'; }
+  const renderHist = ()=>{
+    const hist = load('evals', []);
+    const box = $("#e_hist");
+    if(hist.length===0){ box.innerHTML = `<small class="muted">Sin evaluaciones aún.</small>`; return; }
+    box.innerHTML = `<details><summary>Historial (${hist.length})</summary>` + hist.map(h=>`<div style="margin:8px 0;padding:8px;border:1px solid var(--border);border-radius:10px"><strong>${h.fecha}</strong> — ${h.horas||'—'} · ${h.horas_real||'—'}h<br><em>Obstáculo:</em> ${h.obstaculo||'—'}<br><em>Ajuste:</em> ${h.ajuste||'—'}</div>`).join('') + `</details>`;
+  };
+  $("#e_guardar").onclick = ()=>{
+    const rec = { fecha: todayKey(), horas: $("#e_horas").value, horas_real: $("#e_horas_real").value, obstaculo: $("#e_obstaculo").value.trim(), ajuste: $("#e_ajuste").value.trim() };
+    const hist = load('evals', []); hist.unshift(rec); save('evals', hist.slice(0,52)); alert('Evaluación guardada'); renderHist();
+  };
+  $("#e_ver").onclick = renderHist;
+  renderHist();
+
+  // --- DASHBOARD DIARIO (Maximize Productivity) ---
+  const dashCard = document.createElement('div'); dashCard.className='card';
+  dashCard.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0">Dashboard de hoy</h3><span class="badge" id="dash_fecha"></span></div>
+    <div class="checklist" id="dash_list" style="margin-top:12px"></div>
+    <div style="margin-top:12px"><div class="progress"><span id="dash_bar"></span></div><small class="muted"><span id="dash_pct">0%</span> completado · Racha: <span id="dash_streak">0</span> días</small></div>
+  `;
+  $("#dashboard").appendChild(dashCard);
+  const dashItems = [
+    "Sol por la mañana (10+ min, sin gafas)",
+    "Esperé 90 min antes del primer café",
+    "Primer bloque de trabajo sin interrupciones (90 min)",
+    "Segundo bloque de trabajo sin interrupciones (90 min)",
+    "Descanso profundo o siesta corta después de trabajar",
+    "Moví el cuerpo hoy",
+    "Luces bajas al caer la noche",
+    "Sin pantallas desde las 10 pm"
+  ];
+  const dashKey = d => `dash_${d}`;
+  const loadDash = d => load(dashKey(d), {});
+  const saveDash = (d, o) => save(dashKey(d), o);
+  const renderDash = () => {
+    const d = todayKey();
+    $("#dash_fecha").textContent = d;
+    const state = loadDash(d);
+    const list = $("#dash_list"); list.innerHTML='';
+    dashItems.forEach((txt,i)=>{
+      const id = `i${i}`;
+      const row = document.createElement('label'); row.className='check-item';
+      row.innerHTML = `<input type="checkbox" ${state[id]?'checked':''}><span>${txt}</span>`;
+      const cb = row.querySelector('input');
+      cb.addEventListener('change', ()=>{ state[id]=cb.checked; saveDash(d, state); updateProgress(); });
+      list.appendChild(row);
+    });
+    updateProgress();
+  };
+  const updateProgress = ()=>{
+    const d = todayKey();
+    const state = loadDash(d);
+    const total = dashItems.length;
+    const done = Object.values(state).filter(Boolean).length;
+    const pct = Math.round(done/total*100);
+    $("#dash_pct").textContent = pct+'%';
+    $("#dash_bar").style.width = pct+'%';
+    // racha de días 100%
+    let streak=0; let cursor = new Date();
+    for(let i=0;i<365;i++){
+      const key = cursor.toISOString().slice(0,10);
+      const s = loadDash(key);
+      const ok = dashItems.every((_,idx)=> s[`i${idx}`]);
+      if(ok){ streak++; cursor.setDate(cursor.getDate()-1); } else { break; }
+    }
+    $("#dash_streak").textContent = streak;
+  };
+  renderDash();
+
+  // --- TRACKER DOPAMINA ---
+  const dopCard = document.createElement('div'); dopCard.className='card';
+  dopCard.innerHTML = `
+    <h3 style="margin-top:0">¿Cómo está tu energía hoy?</h3>
+    <p style="margin:0 0 16px;color:var(--muted);font-size:.9rem">Rellena y te digo si tu dopamina está bien o necesitas ajustar algo.</p>
+    <div class="grid grid-2">
+      <div><label>¿Cuántas horas dormiste?</label><input id="d_sueno" type="number" min="0" max="12" step="0.25" placeholder="7.5"></div>
+      <div><label>¿Minutos de sol por la mañana?</label><input id="d_luz" type="number" min="0" step="5" placeholder="10"></div>
+      <div><label>¿Hiciste ejercicio?</label><select id="d_ej"><option value="">—</option><option value="1">Sí</option><option value="0">No</option></select></div>
+      <div></div>
+      <div style="grid-column:1/-1"><label>¿Cuánto de esto hiciste hoy? (0 = nada · 3 = mucho)</label></div>
+      <div><label>Redes sociales más de 30 min</label><input id="d_redes" type="range" min="0" max="3" value="0"></div>
+      <div><label>Azúcar o comida basura</label><input id="d_azucar" type="range" min="0" max="3" value="0"></div>
+      <div><label>Contenido explícito</label><input id="d_porn" type="range" min="0" max="3" value="0"></div>
+      <div><label>Videojuegos intensos</label><input id="d_games" type="range" min="0" max="3" value="0"></div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px"><button id="d_guardar">Guardar</button><button id="d_recomendar" class="secondary">¿Cómo está mi dopamina?</button></div>
+    <div id="d_out" style="margin-top:12px"></div>
+  `;
+  $("#dopamina").appendChild(dopCard);
+  const dKey = d=>`dopa_${d}`;
+  const loadDop = d=> load(dKey(d), {});
+  const saveDop = (d,v)=> save(dKey(d), v);
+  const dopIds = ["sueno","luz","ej","redes","azucar","porn","games"];
+  const dstate = loadDop(todayKey());
+  dopIds.forEach(id=>{ const el = document.getElementById('d_'+id); if(el && dstate[id]!=null) el.value = dstate[id]; });
+  $("#d_guardar").onclick = ()=>{
+    const data = {}; dopIds.forEach(id=> data[id]=document.getElementById('d_'+id).value);
+    saveDop(todayKey(), data);
+    $("#d_out").innerHTML = `<p><small class="muted">Guardado para ${todayKey()}.</small></p>`;
+  };
+  const recomendar = ()=>{
+    const s = parseFloat($("#d_sueno").value||"0");
+    const luz = parseFloat($("#d_luz").value||"0");
+    const picos = ["redes","azucar","porn","games"].reduce((a,id)=> a+parseInt(document.getElementById('d_'+id).value||"0"),0);
+    let msg = "";
+    if(s<7 || picos>2){
+      msg = "Reduce picos mañana y prioriza luz + frío. Evita apilar estímulos. Café antes de las 14:00.";
+    } else if(luz<10){
+      msg = "Aumenta luz solar matutina a 10–30 min. Mantén recompensas intermitentes.";
+    } else {
+      msg = "Baseline estable. Mantén el protocolo y usa recompensa intermitente (moneda).";
+    }
+    $("#d_out").innerHTML = `<div class="card" style="background:var(--bg)"><strong>Recomendación:</strong> ${msg}<br><small class="muted">Basado en episodios de dopamina de Huberman Lab.</small></div>`;
+  };
+  $("#d_recomendar").onclick = recomendar;
+
+  // --- JOURNAL NOCTURNO ---
+  const jCard = document.createElement('div'); jCard.className='card';
+  jCard.innerHTML = `
+    <h3 style="margin-top:0">Cierre del día</h3>
+    <p><small class="muted">3 preguntas. 2 minutos. Cambian cada día.</small></p>
+    <div id="j_qs"></div>
+    <label style="margin-top:8px">Escribe lo que se te ocurra</label>
+    <textarea id="j_text" placeholder="No tiene que ser perfecto. Solo honesto."></textarea>
+    <div style="margin-top:8px;display:flex;gap:8px"><button id="j_guardar">Guardar</button><button id="j_ver" class="secondary">Ver días anteriores</button></div>
+    <div id="j_hist" style="margin-top:12px"></div>
+  `;
+  $("#journal").appendChild(jCard);
+  const preguntas = [
+    "¿Qué fue lo más difícil que hiciste hoy y que podrías haber evitado fácilmente?",
+    "¿Algo que dejaste para después terminó dándote una mejor idea o solución?",
+    "¿Hubo un momento de presión o estrés que convertiste en energía para seguir?",
+    "¿Cambió algo en cómo te sentías físicamente cuando cambiaste cómo pensabas sobre la situación?",
+    "¿Cuál fue el momento del día en que más te costó seguir? ¿Qué hiciste?",
+    "¿Hiciste algo hoy aunque no tenías ganas? ¿Cómo te sentiste después?",
+    "¿Qué harías diferente mañana si pudieras repetir el día?"
+  ];
+  const dayOfYear = d => Math.floor((d - new Date(d.getFullYear(),0,0))/86400000);
+  const rot = dayOfYear(new Date()) % preguntas.length;
+  const qs = [preguntas[rot], preguntas[(rot+1)%preguntas.length], preguntas[(rot+2)%preguntas.length]];
+  $("#j_qs").innerHTML = `<ol>${qs.map(q=>`<li>${q}</li>`).join('')}</ol>`;
+  const jKey = d=>`journal_${d}`;
+  const jstate = load(jKey(todayKey()), {text:""});
+  $("#j_text").value = jstate.text||"";
+  $("#j_guardar").onclick = ()=>{ save(jKey(todayKey()), {text: $("#j_text").value.trim(), qs}); alert('Entrada guardada'); };
+  $("#j_ver").onclick = ()=>{
+    const keys = Object.keys(localStorage).filter(k=>k.startsWith('journal_')).sort().reverse().slice(0,14);
+    const html = keys.map(k=>{
+      const v = load(k,{}); const fecha = k.replace('journal_','');
+      return `<div style="margin:8px 0;padding:10px;border:1px solid var(--border);border-radius:10px"><strong>${fecha}</strong><br><small class="muted">${(v.qs||[]).join(' · ')}</small><p>${(v.text||'').replace(/\n/g,'<br>')}</p></div>`;
+    }).join('') || `<small class="muted">Sin entradas aún.</small>`;
+    $("#j_hist").innerHTML = html;
+  };
+
+})();
+</script>
+</body>
+</html>
