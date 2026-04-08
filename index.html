@@ -62,7 +62,10 @@
 <header>
   <div class="header-inner">
     <h1>🧠 Huberman Protocol Builder</h1>
-    <div id="sync-status"><span id="sync-dot"></span><span id="sync-label">Conectando...</span></div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div id="sync-status"><span id="sync-dot"></span><span id="sync-label">Conectando...</span></div>
+      <button class="secondary" id="btn-vincular" style="padding:6px 10px;font-size:.8rem;border-radius:8px">Vincular</button>
+    </div>
   </div>
   <nav class="tabs" role="tablist" aria-label="Secciones">
     <button class="tab active" data-tab="protocolos" role="tab" aria-selected="true">Protocolos</button>
@@ -141,7 +144,38 @@
   <section id="journal" class="panel" hidden></section>
 </main>
 
-<footer>Datos guardados localmente · Funciona offline</footer>
+<!-- Modal vincular dispositivo -->
+<div id="modal-vincular" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50;align-items:center;justify-content:center;padding:20px">
+  <div class="card" style="max-width:400px;width:100%">
+    <h3 style="margin-top:0">Vincular dispositivo</h3>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button id="tab-generar" class="active" style="flex:1;padding:8px;border-radius:8px;font-size:.9rem">Soy el PC</button>
+      <button id="tab-ingresar" class="secondary" style="flex:1;padding:8px;border-radius:8px;font-size:.9rem">Soy el móvil</button>
+    </div>
+
+    <!-- Panel PC: genera código -->
+    <div id="panel-generar">
+      <p style="color:var(--muted);font-size:.9rem;margin-top:0">Genera un código en el PC y escríbelo en el móvil. Caduca en 10 minutos.</p>
+      <div id="codigo-display" style="font-size:2.5rem;font-weight:800;letter-spacing:.3em;text-align:center;padding:20px;background:var(--bg);border-radius:12px;border:1px solid var(--border);margin-bottom:12px">—</div>
+      <button id="btn-generar-codigo" style="width:100%">Generar código</button>
+      <p id="codigo-estado" style="text-align:center;color:var(--muted);font-size:.85rem;margin-top:8px"></p>
+    </div>
+
+    <!-- Panel móvil: ingresa código -->
+    <div id="panel-ingresar" style="display:none">
+      <p style="color:var(--muted);font-size:.9rem;margin-top:0">Escribe el código que aparece en el PC.</p>
+      <input id="input-codigo" type="text" maxlength="6" placeholder="000000" style="text-align:center;font-size:2rem;letter-spacing:.2em;font-weight:700;margin-bottom:12px">
+      <button id="btn-ingresar-codigo" style="width:100%">Conectar</button>
+      <p id="ingresar-estado" style="text-align:center;font-size:.85rem;margin-top:8px"></p>
+    </div>
+
+    <div style="text-align:right;margin-top:16px">
+      <button class="secondary" id="btn-cerrar-modal" style="padding:8px 14px;font-size:.9rem">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<footer>Datos guardados · Sincroniza entre dispositivos</footer>
 
 <script>
 (() => {
@@ -203,8 +237,67 @@
 
   // Inicia la sincronización al cargar
   pullFromCloud().then(() => {
-    // Después del pull, sube todo lo local que no está en cloud
     pushAllToCloud();
+  });
+
+  // --- Vincular dispositivo ---
+  const genCode = () => String(Math.floor(100000 + Math.random() * 900000));
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('modal-vincular');
+    const btnVincular = document.getElementById('btn-vincular');
+    const btnCerrar = document.getElementById('btn-cerrar-modal');
+    const tabGen = document.getElementById('tab-generar');
+    const tabIng = document.getElementById('tab-ingresar');
+    const panelGen = document.getElementById('panel-generar');
+    const panelIng = document.getElementById('panel-ingresar');
+
+    btnVincular.onclick = () => { modal.style.display = 'flex'; };
+    btnCerrar.onclick = () => { modal.style.display = 'none'; };
+    modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+
+    tabGen.onclick = () => {
+      tabGen.classList.add('active'); tabGen.classList.remove('secondary');
+      tabIng.classList.remove('active'); tabIng.classList.add('secondary');
+      panelGen.style.display = ''; panelIng.style.display = 'none';
+    };
+    tabIng.onclick = () => {
+      tabIng.classList.add('active'); tabIng.classList.remove('secondary');
+      tabGen.classList.remove('active'); tabGen.classList.add('secondary');
+      panelIng.style.display = ''; panelGen.style.display = 'none';
+    };
+
+    // Generar código en el PC
+    document.getElementById('btn-generar-codigo').onclick = async () => {
+      const code = genCode();
+      document.getElementById('codigo-display').textContent = code;
+      document.getElementById('codigo-estado').textContent = 'Guardando...';
+      const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+      const { error } = await supa.from('huberman_link_codes').upsert({ code, device_id: DEVICE_ID, expires_at: expires });
+      if (error) {
+        document.getElementById('codigo-estado').textContent = 'Error al generar. ¿Creaste la tabla?';
+      } else {
+        document.getElementById('codigo-estado').textContent = 'Caduca en 10 min. Escríbelo en el móvil.';
+        // Auto-limpiar después de 10 min
+        setTimeout(() => { document.getElementById('codigo-display').textContent = '—'; document.getElementById('codigo-estado').textContent = ''; }, 10 * 60 * 1000);
+      }
+    };
+
+    // Ingresar código en el móvil
+    document.getElementById('btn-ingresar-codigo').onclick = async () => {
+      const code = document.getElementById('input-codigo').value.trim();
+      const estado = document.getElementById('ingresar-estado');
+      if (code.length !== 6) { estado.textContent = 'El código tiene 6 dígitos.'; estado.style.color = 'var(--danger)'; return; }
+      estado.textContent = 'Buscando...'; estado.style.color = 'var(--muted)';
+      const { data, error } = await supa.from('huberman_link_codes').select('device_id,expires_at').eq('code', code).single();
+      if (error || !data) { estado.textContent = 'Código no encontrado o caducado.'; estado.style.color = 'var(--danger)'; return; }
+      if (new Date(data.expires_at) < new Date()) { estado.textContent = 'Este código ya caducó. Genera uno nuevo en el PC.'; estado.style.color = 'var(--danger)'; return; }
+      // Adopta el device_id del PC
+      localStorage.setItem('_device_id', data.device_id);
+      estado.textContent = '¡Conectado! Descargando datos...'; estado.style.color = 'var(--ok)';
+      await pullFromCloud();
+      setTimeout(() => { modal.style.display = 'none'; location.reload(); }, 1500);
+    };
   });
 
   // --- Utilidades básicas ---
