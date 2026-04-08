@@ -757,6 +757,92 @@
   };
   $("#m_borrar").onclick = ()=>{ if(confirm('¿Borrar meta?')){ localStorage.removeItem('meta12s'); mIds.forEach(id=> document.getElementById('m_'+id).value=''); renderResumen(); } };
 
+  // --- REGISTRO DIARIO DE META ---
+  const dlogKey = d => `dlog_${d}`;
+  const getWeekDays = () => {
+    const today = new Date();
+    const dow = today.getDay(); // 0=dom
+    const monday = new Date(today); monday.setDate(today.getDate() - ((dow+6)%7));
+    return Array.from({length:7}, (_,i) => {
+      const d = new Date(monday); d.setDate(monday.getDate()+i);
+      return d.toISOString().slice(0,10);
+    });
+  };
+  const dayNames = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+
+  const dlogCard = document.createElement('div'); dlogCard.className='card';
+  dlogCard.innerHTML = `
+    <h3 style="margin-top:0">Registro diario</h3>
+    <p style="margin:0 0 14px;color:var(--muted);font-size:.88rem">Apunta lo que hiciste hoy hacia tu meta. El domingo la revisión se rellena sola con el total.</p>
+    <div class="grid grid-2" style="margin-bottom:14px">
+      <div>
+        <label>¿Cuántas horas hoy?</label>
+        <input id="dlog_hrs" type="number" min="0" max="16" step="0.25" placeholder="0">
+      </div>
+      <div>
+        <label>¿Qué hiciste concretamente?</label>
+        <input id="dlog_txt" type="text" placeholder="Ej: escribí 300 palabras del cap. 2">
+      </div>
+    </div>
+    <button id="dlog_guardar" style="margin-bottom:16px">Registrar</button>
+    <div id="dlog_semana"></div>
+  `;
+  $("#metas").appendChild(dlogCard);
+
+  const renderDlogSemana = () => {
+    const meta12 = load('meta12s', null);
+    const metaHrs = parseFloat(meta12?.horas||0);
+    const days = getWeekDays();
+    let totalSemana = 0;
+    const cols = days.map((d,i) => {
+      const entry = load(dlogKey(d), null);
+      const hrs = entry ? parseFloat(entry.hrs||0) : 0;
+      totalSemana += hrs;
+      const isToday = d === todayKey();
+      const hasFuture = d > todayKey();
+      const pct = metaHrs > 0 ? Math.min(hrs/metaHrs*7*100, 100) : 0;
+      return `
+        <div style="text-align:center;flex:1;min-width:36px">
+          <div style="font-size:.72rem;color:${isToday?'var(--accent)':'var(--muted)'};font-weight:${isToday?700:400};margin-bottom:4px">${dayNames[i]}</div>
+          <div style="height:48px;background:var(--bg);border:1px solid var(--border);border-radius:8px;position:relative;overflow:hidden;margin-bottom:4px">
+            ${!hasFuture && hrs>0 ? `<div style="position:absolute;bottom:0;left:0;right:0;background:${isToday?'var(--accent)':'var(--ok)'};height:${Math.min(hrs/(metaHrs||8)*7*100,100)}%;transition:height .3s"></div>` : ''}
+            ${isToday ? `<div style="position:absolute;inset:0;border:2px solid var(--accent);border-radius:8px;pointer-events:none"></div>` : ''}
+          </div>
+          <div style="font-size:.75rem;font-weight:700;color:${hrs>0?'var(--fg)':'var(--muted)'}">${hrs>0?hrs+'h':'—'}</div>
+          ${entry?.txt ? `<div style="font-size:.65rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:52px;margin:0 auto" title="${entry.txt}">${entry.txt}</div>` : ''}
+        </div>`;
+    }).join('');
+
+    const pctSemana = metaHrs > 0 ? Math.min(Math.round(totalSemana/metaHrs*100),100) : null;
+    const colorTotal = pctSemana===null?'var(--muted)':pctSemana>=100?'var(--ok)':pctSemana>=50?'var(--warn)':'var(--danger)';
+
+    document.getElementById('dlog_semana').innerHTML = `
+      <div style="display:flex;gap:6px;align-items:flex-end;margin-bottom:12px">${cols}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div style="font-size:.88rem">
+          <span style="font-weight:800;font-size:1.1rem;color:${colorTotal}">${totalSemana}h</span>
+          <span style="color:var(--muted)"> de ${metaHrs||'?'}h esta semana</span>
+        </div>
+        ${pctSemana!==null?`<span class="badge" style="background:${colorTotal};color:#fff;border:none">${pctSemana}%</span>`:''}
+      </div>
+      ${totalSemana>0&&metaHrs>0?`<div class="progress" style="margin-top:8px"><span style="width:${pctSemana}%;background:${colorTotal}"></span></div>`:''}
+    `;
+
+    // Pre-rellena el input de horas de hoy si ya hay datos
+    const todayEntry = load(dlogKey(todayKey()), null);
+    if(todayEntry){ document.getElementById('dlog_hrs').value=todayEntry.hrs||''; document.getElementById('dlog_txt').value=todayEntry.txt||''; }
+  };
+  renderDlogSemana();
+
+  document.getElementById('dlog_guardar').onclick = () => {
+    const hrs = document.getElementById('dlog_hrs').value;
+    const txt = document.getElementById('dlog_txt').value.trim();
+    if(!hrs){ showToast('Pon cuántas horas hiciste', 'var(--warn)'); return; }
+    save(dlogKey(todayKey()), { hrs: parseFloat(hrs), txt, fecha: todayKey() });
+    renderDlogSemana();
+    showToast('Registrado');
+  };
+
   // Evaluación semanal (destacada domingos)
   const evalWrap = document.createElement('div'); evalWrap.className='card';
   evalWrap.innerHTML = `
@@ -772,7 +858,12 @@
     <div id="e_hist" style="margin-top:12px"></div>
   `;
   $("#metas").appendChild(evalWrap);
-  if(new Date().getDay()===0){ evalWrap.style.outline='2px solid var(--accent)'; }
+  if(new Date().getDay()===0){
+    evalWrap.style.outline='2px solid var(--accent)';
+    // Auto-rellena horas reales desde el log diario
+    const totalLog = getWeekDays().reduce((sum,d)=>{ const e=load(dlogKey(d),null); return sum+(e?parseFloat(e.hrs||0):0); },0);
+    if(totalLog>0) document.getElementById('e_horas_real').value = totalLog;
+  }
   const cumplioColor = v => v==='Sí'?'var(--ok)':v==='Más o menos'?'var(--warn)':'var(--danger)';
   const cumplioIcon = v => v==='Sí'?'✓':v==='Más o menos'?'~':'✗';
 
