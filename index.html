@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Huberman Protocol Builder</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
   :root{
     --bg:#ffffff; --fg:#0f172a; --muted:#64748b; --card:#f8fafc; --border:#e2e8f0;
@@ -50,13 +51,18 @@
   small.muted{color:var(--muted)}
   ol{padding-left:20px}
   hr{border:none;border-top:1px solid var(--border);margin:16px 0}
+  #sync-status{font-size:.75rem;color:var(--muted);display:flex;align-items:center;gap:5px}
+  #sync-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0}
+  #sync-dot.ok{background:var(--ok)}
+  #sync-dot.syncing{background:var(--warn)}
+  #sync-dot.err{background:var(--danger)}
 </style>
 </head>
 <body>
 <header>
   <div class="header-inner">
     <h1>🧠 Huberman Protocol Builder</h1>
-    <span class="badge">Local • Sin cuenta</span>
+    <div id="sync-status"><span id="sync-dot"></span><span id="sync-label">Conectando...</span></div>
   </div>
   <nav class="tabs" role="tablist" aria-label="Secciones">
     <button class="tab active" data-tab="protocolos" role="tab" aria-selected="true">Protocolos</button>
@@ -139,12 +145,79 @@
 
 <script>
 (() => {
+  // --- Supabase Sync ---
+  const SUPA_URL = 'https://qwtzbosgbozubeoqyqdr.supabase.co';
+  const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3dHpib3NnYm96dWJlb3F5cWRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NzEzOTQsImV4cCI6MjA5MTI0NzM5NH0.XTQ3KkZKjum2s8rmuOslgkml54gDHb8J8faA8lDC1hQ';
+  const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+  // Device ID — identifica este dispositivo, se crea solo la primera vez
+  const getDeviceId = () => {
+    let id = localStorage.getItem('_device_id');
+    if (!id) { id = 'dev_' + Math.random().toString(36).slice(2,10); localStorage.setItem('_device_id', id); }
+    return id;
+  };
+  const DEVICE_ID = getDeviceId();
+
+  const setSyncStatus = (state, label) => {
+    const dot = document.getElementById('sync-dot');
+    const lbl = document.getElementById('sync-label');
+    if (dot) { dot.className = ''; dot.classList.add(state); }
+    if (lbl) lbl.textContent = label;
+  };
+
+  // Push una key al cloud
+  const pushToCloud = async (key, value) => {
+    await supa.from('huberman_sync').upsert(
+      { user_id: DEVICE_ID, key, value, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,key' }
+    );
+  };
+
+  // Pull todo desde cloud y mergea con local (cloud gana si es más reciente)
+  const pullFromCloud = async () => {
+    setSyncStatus('syncing', 'Sincronizando...');
+    try {
+      const { data, error } = await supa.from('huberman_sync').select('key,value,updated_at').eq('user_id', DEVICE_ID);
+      if (error) throw error;
+      if (data && data.length) {
+        data.forEach(row => {
+          // Solo sobrescribe si no existe local o si el cloud tiene datos
+          if (row.value !== null) localStorage.setItem(row.key, JSON.stringify(row.value));
+        });
+      }
+      setSyncStatus('ok', 'Sincronizado');
+    } catch(e) {
+      setSyncStatus('err', 'Sin conexión');
+    }
+  };
+
+  // Sincroniza todos los datos locales al cloud (para primer uso desde nuevo dispositivo)
+  const pushAllToCloud = async () => {
+    const skip = new Set(['_device_id']);
+    const entries = Object.keys(localStorage)
+      .filter(k => !skip.has(k))
+      .map(k => ({ user_id: DEVICE_ID, key: k, value: JSON.parse(localStorage.getItem(k)), updated_at: new Date().toISOString() }));
+    if (!entries.length) return;
+    await supa.from('huberman_sync').upsert(entries, { onConflict: 'user_id,key' });
+  };
+
+  // Inicia la sincronización al cargar
+  pullFromCloud().then(() => {
+    // Después del pull, sube todo lo local que no está en cloud
+    pushAllToCloud();
+  });
+
   // --- Utilidades básicas ---
   const $ = s => document.querySelector(s);
   const $$ = s => Array.from(document.querySelectorAll(s));
   const todayKey = () => new Date().toISOString().slice(0,10);
   const load = (k, d=null) => { try { const v = localStorage.getItem(k); return v? JSON.parse(v): d } catch { return d } };
-  const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+  // save: guarda local + sincroniza al cloud en background
+  const save = (k, v) => {
+    localStorage.setItem(k, JSON.stringify(v));
+    setSyncStatus('syncing', 'Guardando...');
+    pushToCloud(k, v).then(() => setSyncStatus('ok', 'Sincronizado')).catch(() => setSyncStatus('err', 'Sin conexión'));
+  };
 
   // --- Tabs ---
   const tabs = $$('.tab');
